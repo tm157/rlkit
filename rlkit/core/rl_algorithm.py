@@ -74,6 +74,9 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
         self.save_replay_buffer = save_replay_buffer
         self.save_algorithm = save_algorithm
         self.save_environment = save_environment
+        self.num_skills = 5 # added the num skills right here!!
+        self.pz = np.full(self.num_skills, 1./self.num_skills)
+        #self.curr_z = self.sample_z()
         if eval_sampler is None:
             if eval_policy is None:
                 eval_policy = exploration_policy
@@ -122,24 +125,45 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
         Do anything before the main training phase.
         """
         pass
+    ''' TODO: Write a function for sample z here'''
+    def sample_z(self):
+        ''' sample z'''
+        dummy = np.zeros((self.num_skills))
+        dummy[np.random.choice(self.num_skills, p = self.pz)] = 1
+        # pdb.set_trace()
+
+        return dummy
+
+    ''' TODO: concat funciton'''
+    def concat_state_z(self, state, z):
+        return np.concatenate([state, z], axis=0)
+
 
     def train_online(self, start_epoch=0):
         self._current_path_builder = PathBuilder()
         observation = self._start_new_rollout()
+        #observation = self.concat_state_z(state, self.curr_z)
+
         for epoch in gt.timed_for(
                 range(start_epoch, self.num_epochs),
                 save_itrs=True,
         ):
             self._start_epoch(epoch)
             for _ in range(self.num_env_steps_per_epoch):
+                ''' TODO'''
+                ''' append the latent variable here'''
                 action, agent_info = self._get_action_and_info(
                     observation,
                 )
                 if self.render:
                     self.training_env.render()
-                next_ob, raw_reward, terminal, env_info = (
+
+                next_state, raw_reward, terminal, env_info = (
                     self.training_env.step(action)
                 )
+                
+                # print (terminal)
+                next_ob = self.concat_state_z(next_state, self.curr_z)
                 self._n_env_steps_total += 1
                 reward = raw_reward * self.reward_scale
                 terminal = np.array([terminal])
@@ -156,6 +180,7 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
                 if terminal or len(self._current_path_builder) >= self.max_path_length:
                     self._handle_rollout_ending()
                     observation = self._start_new_rollout()
+                    #print ('starting new rollout')
                 else:
                     observation = next_ob
 
@@ -163,9 +188,10 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
                 self._try_to_train()
                 gt.stamp('train')
 
-            self._try_to_eval(epoch)
-            gt.stamp('eval')
-            self._end_epoch()
+            # need to fix the evaluation here..figure this out!!
+            # self._try_to_eval(epoch)
+            # gt.stamp('eval')
+            # self._end_epoch()
 
     def _try_to_train(self):
         if self._can_train():
@@ -246,6 +272,7 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
         :param observation:
         :return:
         """
+        #print (observation.shape)
         self.exploration_policy.set_num_steps_total(self._n_env_steps_total)
         return self.exploration_policy.get_action(
             observation,
@@ -265,8 +292,9 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
         logger.pop_prefix()
 
     def _start_new_rollout(self):
+        self.curr_z = self.sample_z()
         self.exploration_policy.reset()
-        return self.training_env.reset()
+        return self.concat_state_z(self.training_env.reset(),self.curr_z)
 
     def _handle_path(self, path):
         """

@@ -15,7 +15,7 @@ import rlkit.torch.pytorch_util as ptu
 
 
 def experiment(variant):
-    env = NormalizedBoxEnv(gym.make('HalfCheetah-v1'))
+    env = NormalizedBoxEnv(gym.make('HalfCheetah-v2'))
     es = OUStrategy(action_space=env.action_space)
     obs_dim = env.observation_space.low.size
     action_dim = env.action_space.low.size

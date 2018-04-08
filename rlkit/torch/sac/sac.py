@@ -9,6 +9,7 @@ from rlkit.core.eval_util import create_stats_ordered_dict
 from rlkit.torch.torch_rl_algorithm import TorchRLAlgorithm
 from rlkit.torch.sac.policies import MakeDeterministic
 
+import pdb
 
 class SoftActorCritic(TorchRLAlgorithm):
     def __init__(
@@ -75,6 +76,7 @@ class SoftActorCritic(TorchRLAlgorithm):
         rewards = batch['rewards']
         terminals = batch['terminals']
         obs = batch['observations']
+        # pdb.set_trace()
         actions = batch['actions']
         next_obs = batch['next_observations']
 

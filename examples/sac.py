@@ -15,7 +15,7 @@ from rlkit.torch.networks import FlattenMlp
 
 
 def experiment(variant):
-    env = NormalizedBoxEnv(gym.make('HalfCheetah-v1'))
+    env = NormalizedBoxEnv(gym.make('HalfCheetah-v2'))
 
     obs_dim = int(np.prod(env.observation_space.shape))
     action_dim = int(np.prod(env.action_space.shape))
