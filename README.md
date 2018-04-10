@@ -7,3 +7,4 @@
 - [x] Write a function for merge and extract. 
 - [x] Append z's size for everything.
 - [ ] Implement GMM
+- [ ] Train Ant using SAC and DIAYN
