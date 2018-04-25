@@ -109,6 +109,11 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
         self._current_path_builder = PathBuilder()
         self._exploration_paths = []
 
+        '''different integration types'''
+        # {concatenation, bilinear_integration, multiplicative integration}
+        self.integration_type = 'concatenation'
+
+
     def train(self, start_epoch=0):
         self.pretrain()
         if start_epoch == 0:
@@ -126,18 +131,31 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
         """
         pass
     ''' TODO: Write a function for sample z here'''
+    
     def sample_z(self):
-        ''' sample z'''
+        ''' sample z from a categorical distribution'''
         dummy = np.zeros((self.num_skills))
         dummy[np.random.choice(self.num_skills, p = self.pz)] = 1
         # pdb.set_trace()
-
         return dummy
 
-    ''' TODO: concat funciton'''
+    ''' TODO: concat function'''
     def concat_state_z(self, state, z):
-        return np.concatenate([state, z], axis=0)
-
+        ''' size gets added '''
+        if self.integration_type == 'concatenation':
+            return np.concatenate([state, z], axis=0)
+        
+        ''' size gets multiplied '''    
+        elif self.integration_type == 'bilinear_integration':
+            return np.outer(state,z).flatten()
+        
+        ''' size remains same''' 
+        ''' can be used only when state and z are of same dimension '''   
+        elif self.integration_type == 'multiplicative_integration':
+            return np.multiply(state,z)        
+        
+        else:
+            raise NotImplementedError
 
     def train_online(self, start_epoch=0):
         self._current_path_builder = PathBuilder()
