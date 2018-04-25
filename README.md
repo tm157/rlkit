@@ -7,3 +7,7 @@
 - [x] Write a function for merge and extract. 
 - [x] Append z's size for everything.
 - [ ] Implement GMM
+
+## 24th april
+- [ ] Run SAC today.
+- [ ] Run Tensorflow wala DIAYN on half cheetah, humanoid and ant
