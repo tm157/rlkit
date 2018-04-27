@@ -11,6 +11,33 @@ from rlkit.data_management.path_builder import PathBuilder
 from rlkit.policies.base import ExplorationPolicy
 from rlkit.samplers.in_place import InPlacePathSampler
 
+def get_concat_size(obs_dim, num_skills, concat_type):
+    if concat_type == 'concatenation':
+        return obs_dim + num_skills
+    elif concat_type == 'bilinear_integration':
+        return obs_dim * num_skills
+    else:
+        return NotImplementedError
+
+''' TODO: concat function'''
+def concat_state_z(concat_type, state, z):
+    ''' size gets added '''
+    if concat_type == 'concatenation':
+        embed = np.concatenate([state, z], axis=0)
+    
+    # size gets multiplied   
+    elif concat_type == 'bilinear_integration':
+        return np.outer(state,z).flatten()
+    
+    # size remains same''' 
+    # can be used only when state and z are of same dimension   
+    elif concat_type == 'multiplicative_integration':
+        embed = np.multiply(state,z)        
+    
+    else:
+        raise NotImplementedError
+    return embed   
+
 
 class RLAlgorithm(metaclass=abc.ABCMeta):
     def __init__(
@@ -34,6 +61,8 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
             eval_sampler=None,
             eval_policy=None,
             replay_buffer=None,
+            num_skills=50,
+            concat_type='concatenation'
     ):
         """
         Base class for RL Algorithms
@@ -74,7 +103,14 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
         self.save_replay_buffer = save_replay_buffer
         self.save_algorithm = save_algorithm
         self.save_environment = save_environment
-        self.num_skills = 5 # added the num skills right here!!
+        # self.num_skills = 5 # added the num skills right here!!
+        self.num_skills = num_skills
+        '''different integration types'''
+        # {concatenation, bilinear_integration, multiplicative integration}
+        # self.concat_type = 'concatenation'
+        self.concat_type = concat_type
+
+
         self.pz = np.full(self.num_skills, 1./self.num_skills)
         #self.curr_z = self.sample_z()
         if eval_sampler is None:
@@ -96,6 +132,10 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
             replay_buffer = EnvReplayBuffer(
                 self.replay_buffer_size,
                 self.env,
+                get_concat_size(self.obs_space.shape[0], 
+                                self.num_skills, 
+                                self.concat_type)
+
             )
         self.replay_buffer = replay_buffer
 
@@ -109,6 +149,7 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
         self._current_path_builder = PathBuilder()
         self._exploration_paths = []
 
+        
     def train(self, start_epoch=0):
         self.pretrain()
         if start_epoch == 0:
@@ -126,18 +167,14 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
         """
         pass
     ''' TODO: Write a function for sample z here'''
+
+    
     def sample_z(self):
-        ''' sample z'''
+        ''' sample z from a categorical distribution'''
         dummy = np.zeros((self.num_skills))
         dummy[np.random.choice(self.num_skills, p = self.pz)] = 1
         # pdb.set_trace()
-
-        return dummy
-
-    ''' TODO: concat funciton'''
-    def concat_state_z(self, state, z):
-        return np.concatenate([state, z], axis=0)
-
+        return dummy 
 
     def train_online(self, start_epoch=0):
         self._current_path_builder = PathBuilder()
@@ -163,7 +200,9 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
                 )
                 
                 # print (terminal)
-                next_ob = self.concat_state_z(next_state, self.curr_z)
+                next_ob = concat_state_z(self.concat_type, 
+                                         next_state, 
+                                         self.curr_z)
                 self._n_env_steps_total += 1
                 reward = raw_reward * self.reward_scale
                 terminal = np.array([terminal])
@@ -189,9 +228,9 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
                 gt.stamp('train')
 
             # need to fix the evaluation here..figure this out!!
-            # self._try_to_eval(epoch)
-            # gt.stamp('eval')
-            # self._end_epoch()
+            self._try_to_eval(epoch)
+            gt.stamp('eval')
+            self._end_epoch()
 
     def _try_to_train(self):
         if self._can_train():
@@ -294,7 +333,9 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
     def _start_new_rollout(self):
         self.curr_z = self.sample_z()
         self.exploration_policy.reset()
-        return self.concat_state_z(self.training_env.reset(),self.curr_z)
+        return concat_state_z(self.concat_type,
+                              self.training_env.reset(),
+                              self.curr_z)
 
     def _handle_path(self, path):
         """

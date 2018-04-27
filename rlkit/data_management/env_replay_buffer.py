@@ -7,17 +7,20 @@ class EnvReplayBuffer(SimpleReplayBuffer):
             self,
             max_replay_buffer_size,
             env,
+            embed_dim
     ):
         """
         :param max_replay_buffer_size:
         :param env:
         """
+        # import pdb
+        # pdb.set_trace()
         self.env = env
         self._ob_space = env.observation_space
         self._action_space = env.action_space
         super().__init__(
             max_replay_buffer_size=max_replay_buffer_size,
-            observation_dim=get_dim(self._ob_space)+5,
+            observation_dim=embed_dim,
             action_dim=get_dim(self._action_space),
         )
 

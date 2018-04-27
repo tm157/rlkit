@@ -30,6 +30,8 @@ class DIAYN(TorchRLAlgorithm):
             policy_std_reg_weight=1e-3,
             policy_pre_activation_weight=0.,
             optimizer_class=optim.Adam,
+            # num_skills=50,
+            # concat_type='concatenation',            
 
             soft_target_tau=1e-2,
             plotter=None,
@@ -49,7 +51,8 @@ class DIAYN(TorchRLAlgorithm):
         )
 
         # TODO: LOAD THIS FROM KWARGS
-        self.num_skills = 5
+        #self.num_skills = num_skills
+        self.obs_dim = env.observation_space.shape[0]
 
         self.policy = policy
         self.qf = qf
@@ -88,9 +91,20 @@ class DIAYN(TorchRLAlgorithm):
 
     def split_state_and_z(self, observation):
         ## write this function... Make it for batch
-        state = observation[:, : self.env.observation_space.shape[0]]
-        z = observation[:, self.env.observation_space.shape[0]:]
-        # pdb.set_trace()
+        
+        if self.concat_type == 'concatenation':
+            state = observation[:, : self.env.observation_space.shape[0]]
+            z = observation[:, self.env.observation_space.shape[0]:]
+            # pdb.set_trace()
+        elif self.concat_type == 'bilinear_integration':
+            temp = np.reshape(observation, (self.num_skills, self.obs_dim))
+            dummy = np.sum(np.abs(temp), axis=1)
+            idx = np.where(temp!=0)[0]
+            observation = temp[idx,:]
+            z = np.zeros((self.num_skills,))
+            z[idx] = 1
+        else:
+            raise NotImplementedError
         return state, z
 
             

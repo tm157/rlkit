@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def rollout(env, agent, max_path_length=np.inf, animated=False):
+def rollout(env, agent, num_skills, max_path_length=np.inf, animated=False):
     """
     The following value for the following keys will be a 2D array, with the
     first dimension corresponding to the time dimension.
@@ -29,6 +29,8 @@ def rollout(env, agent, max_path_length=np.inf, animated=False):
     agent_infos = []
     env_infos = []
     o = env.reset()
+    ''' TODO: concat z here '''
+
     next_o = None
     path_length = 0
     if animated:

@@ -11,3 +11,4 @@
 ## 24th april
 - [ ] Run SAC today.
 - [ ] Run Tensorflow wala DIAYN on half cheetah, humanoid and ant
+- [ ] Train Ant using SAC and DIAYN

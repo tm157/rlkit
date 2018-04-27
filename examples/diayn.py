@@ -1,4 +1,4 @@
-"""
+"""Run
 Run PyTorch Soft Actor Critic on HalfCheetahEnv.
 
 NOTE: You need PyTorch 0.3 or more (to have torch.distributions)
@@ -16,23 +16,36 @@ from rlkit.torch.networks import FlattenMlp
 # from rlkit.torch.networks import Discriminator
 
 
+def get_concat_size(obs_dim, num_skills, concat_type):
+    if concat_type == 'concatenation':
+        return obs_dim + num_skills
+    elif concat_type == 'bilinear_integration':
+        return obs_dim * num_skills
+    else:
+        return NotImplementedError
+        
+
+
 def experiment(variant):
-    env = NormalizedBoxEnv(gym.make('HalfCheetah-v2'))
+    env = NormalizedBoxEnv(gym.make('HalfCheetah-v1'))
 
     num_skills = variant['num_skills']
     '''observation dim includes dim of latent variable'''
-    obs_dim = int(np.prod(env.observation_space.shape)) + num_skills
+    concat_type = variant['concat_type']
+    
+    obs_dim = int(np.prod(env.observation_space.shape))
     action_dim = int(np.prod(env.action_space.shape))
+    embed_size = get_concat_size(obs_dim, num_skills, concat_type)
 
     net_size = variant['net_size']
     qf = FlattenMlp(
         hidden_sizes=[net_size, net_size],
-        input_size=obs_dim + action_dim,
+        input_size= embed_size + action_dim,
         output_size=1,
     )
     vf = FlattenMlp(
         hidden_sizes=[net_size, net_size],
-        input_size=obs_dim,
+        input_size=embed_size,
         output_size=1,
     )
 
@@ -40,14 +53,14 @@ def experiment(variant):
     # num_skills=variant['num_skills']
     discrim = FlattenMlp(
         hidden_sizes=[net_size,net_size],
-        input_size=obs_dim-num_skills,
+        input_size=obs_dim,
         output_size=num_skills,
         output_activation=nn.Sigmoid()
         )
 
     policy = TanhGaussianPolicy(
         hidden_sizes=[net_size, net_size],
-        obs_dim=obs_dim,
+        obs_dim=embed_size,
         action_dim=action_dim,
     )
     algorithm = DIAYN(
@@ -65,6 +78,9 @@ def experiment(variant):
 
 if __name__ == "__main__":
     # noinspection PyTypeChecker
+    num_skills = 50
+    concat_type = 'concatenation'
+
     variant = dict(
         algo_params=dict(
             num_epochs=1000,
@@ -78,9 +94,11 @@ if __name__ == "__main__":
             policy_lr=3E-4,
             qf_lr=3E-4,
             vf_lr=3E-4,
+
         ),
-        num_skills=5,
         net_size=300,
+        num_skills=num_skills,
+        concat_type=concat_type
     )
     setup_logger('name-of-experiment', variant=variant)
     experiment(variant)
