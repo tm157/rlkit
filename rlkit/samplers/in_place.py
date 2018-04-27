@@ -12,11 +12,12 @@ class InPlacePathSampler(object):
     sampler.obtain_samples  # this has side-effects: env will change!
     ```
     """
-    def __init__(self, env, policy, max_samples, max_path_length):
+    def __init__(self, env, policy, max_samples, max_path_length, num_skills):
         self.env = env
         self.policy = policy
         self.max_path_length = max_path_length
         self.max_samples = max_samples
+        self.num_skills = num_skills
         assert (
             max_samples >= max_path_length,
             "Need max_samples >= max_path_length"
@@ -33,7 +34,10 @@ class InPlacePathSampler(object):
         n_steps_total = 0
         while n_steps_total + self.max_path_length <= self.max_samples:
             path = rollout(
-                self.env, self.policy, max_path_length=self.max_path_length
+                self.env, 
+                self.policy, 
+                num_skills=self.num_skills,
+                max_path_length=self.max_path_length
             )
             paths.append(path)
             n_steps_total += len(path['observations'])
